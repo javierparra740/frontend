@@ -1,5 +1,5 @@
 
-import { Task } from '../types/task.types';
+import type { Task } from '../types/task.types';
 import { auditService } from './auditService';
 
 const updateTask = async (task: Task): Promise<Task> => {

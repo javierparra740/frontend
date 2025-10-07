@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import KanbanEditModal from '../KanbanEditModal/KanbanEditModal';
 import styles from './KanbanCard.module.css';
 import { taskService } from '../../../services/taskService';
-import { Task } from '../../../types/task.types';
+import type { Task } from '../../../types/task.types';
 
 interface KanbanCardProps {
   task: Task;
