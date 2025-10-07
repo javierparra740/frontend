@@ -32,28 +32,16 @@ h2 {
   display: block;
   margin-bottom: 0.5rem;
   color: #666;
-<<<<<<< HEAD
-  width: 100%;
-=======
->>>>>>> 0855d3829529b2706847812384a2d031e75776e1
   text-align: center;
 }
 
 .inputGroup input {
-<<<<<<< HEAD
-  width: 90%;
-=======
   width: 80%;
->>>>>>> 0855d3829529b2706847812384a2d031e75776e1
   max-width: 320px;
   padding: 0.75rem;
   border: 1px solid #ccc;
   border-radius: 4px;
-<<<<<<< HEAD
-  text-align: center;
-=======
   margin: 0 auto;
->>>>>>> 0855d3829529b2706847812384a2d031e75776e1
 }
 
 .button {
