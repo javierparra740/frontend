@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Task } from '../../../types/task.types';
+import type { Task } from '../../../types/task.types';
 import styles from './KanbanCard.module.css';
 
 interface TaskCardProps {
