@@ -6,8 +6,8 @@
       "properties": {
         "name": "Punto de Interés Inicial",
         "style": {
-          "color": "blue",
-          "fillColor": "blue"
+          "color": "green",
+          "fillColor": "green"
         }
       },
       "geometry": {
@@ -21,7 +21,7 @@
         "name": "Ruta de Ejemplo",
         "style": {
           "color": "red",
-          "weight": 4
+          "weight": 10
         }
       },
       "geometry": {
@@ -58,4 +58,3 @@
     }
   ]
 }
-

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 // Importamos useMap para acceder a la instancia de Leaflet Map
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet'; 
@@ -59,13 +58,13 @@ const PmControls: React.FC<PmControlsProps> = ({ onGeometryCreated }) => {
     useEffect(() => {
         // Inicialización y controles de leaflet.pm (se ejecutan una vez)
         map.pm.addControls({
-            position: 'topleft',
+            position: 'bottomleft',
             drawMarker: true,
             drawPolyline: true,
             drawPolygon: true,
-            // drawCircle: true,
-            // editMode: true,
-            // removalMode: true,
+            //drawCircle: true,
+            //editMode: true,
+            //removalMode: true,
         });
 
         // Configurar el listener de creación de geometría
@@ -129,7 +128,7 @@ const GeoMapViewer: React.FC = () => {
         {isUploading && <span style={{ marginLeft: '10px', color: 'blue' }}>Subiendo...</span>}
       </div>
       <MapContainer
-        center={[51.505, -0.09]}
+        center={[-38.93, -68]}
         zoom={13}
         style={{ height: 'calc(100% - 40px)', width: '100%' }} // Ajuste de altura
       >
