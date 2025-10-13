@@ -4,7 +4,7 @@ import { useTasksKanban } from '../../../hooks/useTasks';
 import TaskCard from '../KanbanCard/KanbanCard';
 import styles from './KanbanBoard.module.css';
 import { useDragAndDrop } from '@formkit/drag-and-drop/react';
-import { Task } from '../../../types/task.types';
+import type { Task } from '../../../types/task.types';
 import { PostgresTaskService } from '../../../../data/TaskService.postgres';
 import TaskFilter from '../TaskFilter/TaskFilter';
 import CreateTaskModal from '../CreateTaskModal/CreateTaskModal';
