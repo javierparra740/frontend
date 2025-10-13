@@ -1,44 +1,26 @@
 
-import React, { useState } from 'react';
-import KanbanEditModal from '../KanbanEditModal/KanbanEditModal';
+import React from 'react';
+import { Task } from '../../../types/task.types';
 import styles from './KanbanCard.module.css';
-import { taskService } from '../../../services/taskService';
-import type { Task } from '../../../types/task.types';
 
-interface KanbanCardProps {
+interface TaskCardProps {
   task: Task;
 }
 
-const KanbanCard: React.FC<KanbanCardProps> = ({ task }) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const handleOpenModal = () => {
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-  };
-
-  const handleSave = async (updatedTask: Task) => {
-    await taskService.updateTask(updatedTask);
-    handleCloseModal();
-  };
-
+const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
+  const statusClass = task.status ? styles[`statusIndicator-${task.status.replace(/\s+/g, '')}`] : '';
   return (
-    <div className={styles.card}>
-      <span>{task.title}</span>
-      <button onClick={handleOpenModal}>Edit</button>
-
-      {isModalOpen && (
-        <KanbanEditModal
-          task={task}
-          onClose={handleCloseModal}
-          onSave={handleSave}
-        />
-      )}
+    <div
+      id={task.id}
+      className={`${styles.taskCard} ${statusClass}`}
+    >
+      <div className={styles.taskTitle}>{task.title}</div>
+      {task.assignee && <div className={styles.taskAssignee}>{task.assignee.name}</div>}
+      <div className={styles.taskDueDate}>
+        Due: {new Date(task.dueDate).toLocaleDateString()}
+      </div>
     </div>
   );
 };
 
-export default KanbanCard;
+export default TaskCard;
