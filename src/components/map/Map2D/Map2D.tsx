@@ -121,7 +121,6 @@ const GeoMapViewer: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [drawnGeometry, setDrawnGeometry] = useState<any>(null);
   const { layers, addLayer } = useGeoLayers();
-<<<<<<< HEAD
   
   // 2. Manejador optimizado para actualizar el estado de la geometría dibujada
   const handleGeometryCreated = useCallback((geoJson: any) => {
@@ -137,7 +136,6 @@ const GeoMapViewer: React.FC = () => {
     event.target.value = '';
 
     setIsUploading(true);
-=======
   const mapRef = useRef<L.Map | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -193,7 +191,6 @@ const GeoMapViewer: React.FC = () => {
         setUploadingFiles(prev => prev.map(f => f.file.name === fileName ? { ...f, progress } : f));
     };
 
->>>>>>> e2e471f (actualizacion de GeoMapViewer con cambios avanzados)
     try {
       const result = await GeoService.uploadLayer(file);
       if (result.success) {
@@ -245,45 +242,6 @@ const GeoMapViewer: React.FC = () => {
   const geoJsonOutputClass = 'geoJsonOutput';
 
   return (
-<<<<<<< HEAD
-    <div className={mapContainerClass} style={{ height: '80vh', width: '100%' }}>
-      <div className={toolbarClass} style={{ padding: '10px', backgroundColor: '#f0f0f0' }}>
-        <input type="file" accept=".gpkg,.shp,.geojson" onChange={handleFileUpload} disabled={isUploading} />
-        {isUploading && <span style={{ marginLeft: '10px', color: 'blue' }}>Subiendo...</span>}
-      </div>
-      <MapContainer
-        center={[-38.93, -68]}
-        zoom={13}
-        style={{ height: 'calc(100% - 40px)', width: '100%' }} // Ajuste de altura
-      >
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        />
-        
-        {/* 4. Renderizamos el componente PmControls como hijo de MapContainer */}
-        <PmControls onGeometryCreated={handleGeometryCreated} />
-
-        {layers.map((_layer, index) => {
-          // Nota: Aquí se mantiene el GeoJSON vacío, pero en una aplicación real 
-          // deberías usar un hook o lógica para hacer un fetch real de layer.geoFileUrl.
-          const emptyFeatureCollection: FeatureCollection = {
-            type: 'FeatureCollection',
-            features: [],
-          };
-          return <GeoJSON key={index} data={emptyFeatureCollection} />;
-        })}
-      
-
-        {drawnGeometry && <GeoJSON data={drawnGeometry} />}
-      </MapContainer>
-      {drawnGeometry && (
-          <div className={geoJsonOutputClass} style={{ marginTop: '10px', padding: '10px', border: '1px solid #ccc', maxHeight: '200px', overflowY: 'auto' }}>
-              <strong>Drawn GeoJSON:</strong>
-              <pre style={{ margin: 0 }}>{JSON.stringify(drawnGeometry, null, 2)}</pre>
-          </div>
-      )}
-=======
     <div className={styles.pageContainer}>
         <div
             className={`${styles.dropzone} ${isDragging ? styles.dragging : ''}`}
@@ -339,7 +297,6 @@ const GeoMapViewer: React.FC = () => {
                 {drawnGeometry && <GeoJSON data={drawnGeometry} />}
             </MapContainer>
         </div>
->>>>>>> e2e471f (actualizacion de GeoMapViewer con cambios avanzados)
     </div>
   );
 };
