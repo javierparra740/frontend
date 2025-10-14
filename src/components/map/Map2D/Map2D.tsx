@@ -1,12 +1,6 @@
-<<<<<<< HEAD
-import React, { useState, useEffect, useCallback } from 'react';
-// Importamos useMap para acceder a la instancia de Leaflet Map
-import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet'; 
-=======
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
->>>>>>> e2e471f (actualizacion de GeoMapViewer con cambios avanzados)
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.pm/dist/leaflet.pm.css';
 import 'leaflet.pm'; // Solo necesitamos que el plugin se ejecute, sin necesidad de importar L
@@ -21,12 +15,6 @@ import type { FeatureCollection } from 'geojson';
 const GeoService = {
   uploadLayer: async (file: File) => {
     console.log(`Uploading layer: ${file.name}`);
-<<<<<<< HEAD
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    const mockUrl = `/uploads/${file.name}.json`;
-    console.log(`File uploaded to ${mockUrl}`);
-    return { success: true, layer: { name: file.name, geoFileUrl: mockUrl } };
-=======
     // Simulate API call with progress
     return new Promise<{ success: boolean; layer: { name: string; geoFileUrl: string } }>(resolve => {
         let progress = 0;
@@ -44,7 +32,6 @@ const GeoService = {
             }
         }, 300);
     });
->>>>>>> e2e471f (actualizacion de GeoMapViewer con cambios avanzados)
   },
 };
 
