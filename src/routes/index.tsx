@@ -5,7 +5,7 @@ import CreateProject from "../components/project/CreateProject";
 
 
 
-import GeoMapViewer from "../components/map/Map2D/Map2D";
+import GeoMapViewer from "../components/map/Map2D/GeoMapViewer";
 
 
 import KanbanCard from "../components/kanban/KanbanCard/KanbanCard"
