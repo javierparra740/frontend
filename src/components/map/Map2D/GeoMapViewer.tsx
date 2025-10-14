@@ -1,155 +1,164 @@
 import React, { useState, useEffect, useCallback } from 'react';
-// Importamos useMap para acceder a la instancia de Leaflet Map
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.pm/dist/leaflet.pm.css';
-// Importamos 'leaflet.pm' para inicializar el plugin globalmente
 import 'leaflet.pm';
-
 import type { FeatureCollection } from 'geojson';
+import shp from 'shpjs';
+import proj4 from 'proj4';
+import { geoJSON } from 'leaflet';
+import L from 'leaflet';
 
-// Asumimos un objeto CSS para mantener la funcionalidad sin archivos externos.
-const styles = {
-    pageContainer: 'flex flex-col h-screen',
-    dropzone: 'p-4 border-2 border-dashed border-gray-400 m-2 transition-colors',
-    dragging: 'border-green-500 bg-green-50',
-    uploadButton: 'bg-blue-500 text-white p-2 rounded',
-    mapViewer: 'flex-grow h-1/2',
-    fileList: 'mt-4 border-t pt-2',
-    fileItem: 'flex justify-between items-center py-1',
-    fileName: 'truncate w-1/2',
-    progressBarContainer: 'w-1/4 h-2 bg-gray-200 rounded overflow-hidden',
-    progressBar: 'h-full bg-green-500 transition-all duration-300',
-    fileStatus: 'w-1/6 text-right'
-};
+// Configura proj4 para reproyecciones comunes
+proj4.defs('EPSG:4326', '+proj=longlat +datum=WGS84 +no_defs');
+proj4.defs('EPSG:3857', '+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs');
 
-
-// --- MOCK SERVICES (Corregidos para callback de progreso y fetch) ---
-
-// Define un tipo para el callback de progreso
+// --- SERVICIO REAL DE CARGA ---
 type ProgressCallback = (progress: number) => void;
 
 const GeoService = {
-    // FIX C: Ahora acepta un callback para reportar el progreso de forma local
-    uploadLayer: async (file: File, onProgress: ProgressCallback) => {
-        console.log(`Uploading layer: ${file.name}`);
-
-        return new Promise<{ success: boolean; layer: { name: string; geoFileUrl: string } }>(resolve => {
-            let progress = 0;
-            const interval = setInterval(() => {
-                progress += 20;
-                // Llama al callback local en lugar de una función global de window
-                onProgress(progress);
-
-                if (progress >= 100) {
-                    clearInterval(interval);
-                    const mockUrl = `/uploads/${file.name}.json`;
-                    console.log(`File uploaded to ${mockUrl}`);
-                    resolve({ success: true, layer: { name: file.name, geoFileUrl: mockUrl } });
+    uploadLayer: async (file: File, onProgress: ProgressCallback): Promise<{ success: boolean; layer: { name: string; geoJson: FeatureCollection } }> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    onProgress(30);
+                    const buffer = e.target?.result as ArrayBuffer;
+                    let geoJson = await shp(buffer); // FeatureCollection or array
+                    if (Array.isArray(geoJson)) {
+                        // If it's an array, merge all features into one FeatureCollection
+                        geoJson = {
+                            type: 'FeatureCollection',
+                            features: geoJson.flatMap((fc: any) => fc.features),
+                        };
+                    }
+                    onProgress(100);
+                    resolve({ success: true, layer: { name: file.name, geoJson } });
+                } catch (err) {
+                    reject(err);
                 }
-            }, 300);
+            };
+            reader.readAsArrayBuffer(file);
         });
     },
-
-    // FIX B: Servicio para simular la obtención del GeoJSON de una URL
-    fetchGeoJson: async (url: string): Promise<FeatureCollection> => {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        console.log(`Fetching GeoJSON from: ${url}`);
-
-        // Datos mock de ejemplo para que la capa no se renderice vacía
-        return {
-            type: 'FeatureCollection',
-            features: [
-                {
-                    type: 'Feature',
-                    properties: { name: `Data from ${url}` },
-                    geometry: {
-                        type: 'Point',
-                        coordinates: [(-0.09 + Math.random() * 0.02), (51.505 + Math.random() * 0.02)]
-                    }
-                }
-            ]
-        };
-    }
 };
 
-
-interface LayerMetadata {
+// --- TIPOS ---
+interface LayerData {
     name: string;
-    geoFileUrl: string;
+    geoJson: FeatureCollection;
 }
 
+// --- HOOK PARA CAPAS ---
 const useGeoLayers = () => {
-    const [layers, setLayers] = useState<LayerMetadata[]>([
-        { name: 'Initial Layer', geoFileUrl: '/initial-layer.json' }
-    ]);
+    const [layers, setLayers] = useState<LayerData[]>([]);
 
-    const addLayer = (layer: LayerMetadata) => {
-        setLayers(prev => [...prev, layer]);
+    const addLayer = (layer: LayerData) => {
+        setLayers((prev) => [...prev, layer]);
     };
 
     return { layers, addLayer };
 };
 
+// --- UPLOAD STATE ---
 interface UploadingFile {
     file: File;
     status: 'pending' | 'uploading' | 'completed' | 'error';
     progress: number;
 }
 
-
-// --- NUEVO COMPONENTE: LayerRenderer (Solución a FIX B) ---
-// Se encarga de la lógica de fetch y renderizado individual de una capa
-interface LayerRendererProps {
-    layer: LayerMetadata;
-}
-
-const LayerRenderer: React.FC<LayerRendererProps> = ({ layer }) => {
-    const [geoJsonData, setGeoJsonData] = useState<FeatureCollection | null>(null);
-
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                const data = await GeoService.fetchGeoJson(layer.geoFileUrl);
-                setGeoJsonData(data);
-            } catch (error) {
-                console.error(`Failed to load data for layer ${layer.name}:`, error);
-                setGeoJsonData(null);
-            }
-        };
-
-        if (layer.geoFileUrl) {
-            loadData();
-        }
-    }, [layer.geoFileUrl, layer.name]); // Dependencia del URL para re-fetch
-
-    if (!geoJsonData) {
-        return null;
-    }
-
-    return <GeoJSON data={geoJsonData} style={{ color: 'blue', weight: 2 }} />;
+// --- ESTILOS INLINE ---
+const style = {
+    dropzoneBase: {
+        padding: '1rem',
+        border: '2px dashed #9ca3af',
+        margin: '0.5rem',
+        transition: 'all 0.15s ease-in-out',
+        textAlign: 'center' as const,
+    },
+    dropzoneDragging: {
+        borderColor: '#10b981',
+        backgroundColor: '#f0fff4',
+    },
+    uploadButton: {
+        backgroundColor: '#3b82f6',
+        color: 'white',
+        padding: '0.5rem 1rem',
+        borderRadius: '0.25rem',
+        border: 'none',
+        cursor: 'pointer',
+    },
+    fileList: {
+        marginTop: '1rem',
+        paddingTop: '0.5rem',
+        borderTop: '1px solid #e5e7eb',
+    },
+    fileItem: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '0.25rem 0',
+    },
+    fileName: {
+        overflow: 'hidden',
+        whiteSpace: 'nowrap' as const,
+        textOverflow: 'ellipsis',
+        width: '50%',
+    },
+    progressBarContainer: {
+        width: '25%',
+        height: '0.5rem',
+        backgroundColor: '#e5e7eb',
+        borderRadius: '0.25rem',
+        overflow: 'hidden',
+    },
+    progressBar: {
+        height: '100%',
+        backgroundColor: '#10b981',
+        transition: 'width 0.3s ease-in-out',
+    },
+    fileStatus: {
+        width: '16.6667%',
+        textAlign: 'right' as const,
+        fontSize: '0.875rem',
+    },
 };
 
-
-// --- NUEVO COMPONENTE: PmControls (Solución a FIX A) ---
-// Utiliza useMap para acceder a la instancia y configurar el plugin
-interface PmControlsProps {
-    onGeometryCreated: (geoJson: any) => void;
-}
-
-const PmControls: React.FC<PmControlsProps> = ({ onGeometryCreated }) => {
+// --- RENDERIZADO Y EFECTOS ---
+const LayerRenderer: React.FC<{ layer: LayerData }> = ({ layer }) => {
     const map = useMap();
 
-    const handlePmCreate = useCallback((e: any) => {
-        const { layer } = e;
-        const geoJson = layer.toGeoJSON();
-        onGeometryCreated(geoJson);
-        console.log('Geometry created:', geoJson);
-    }, [onGeometryCreated]);
+    useEffect(() => {
+        if (!layer.geoJson.features.length) return;
+        const leafletLayer = geoJSON(layer.geoJson);
+        const bounds = leafletLayer.getBounds();
+        if (bounds.isValid()) {
+            map.fitBounds(bounds, { padding: [50, 50] });
+        } else {
+            const [lng, lat] = (layer.geoJson.features[0].geometry as any).coordinates;
+            map.setView([lat, lng], 16);
+        }
+    }, [layer, map]);
 
+    return (
+        <GeoJSON
+            data={layer.geoJson}
+            style={{ color: 'blue', weight: 2 }}
+            pointToLayer={(feature, latlng) => {
+                const popup = feature.properties
+                    ? `<div><strong>${feature.properties.name || 'Sin nombre'}</strong><br/>${JSON.stringify(feature.properties)}</div>`
+                    : 'Sin datos';
+                return (L as any).circleMarker(latlng, { radius: 6, color: 'blue' }).bindPopup(popup);
+            }}
+        />
+    );
+};
+
+// --- CONTROLES DE DIBUJO ---
+const PmControls: React.FC<{ onGeometryCreated: (geoJson: any) => void }> = ({ onGeometryCreated }) => {
+    const map = useMap();
 
     useEffect(() => {
-        // Inicialización y controles de leaflet.pm (se ejecutan una vez)
         if (!map.pm) return;
         map.pm.addControls({
             position: 'topleft',
@@ -159,64 +168,49 @@ const PmControls: React.FC<PmControlsProps> = ({ onGeometryCreated }) => {
             //editMode: true,
             //removalMode: true,
         });
-
-        // Configurar el listener de creación de geometría
-        map.on('pm:create', handlePmCreate);
-
-        // Función de limpieza
+        const handler = (e: any) => onGeometryCreated(e.layer.toGeoJSON());
+        map.on('pm:create', handler);
         return () => {
-            map.off('pm:create', handlePmCreate);
-            // map.pm.removeControls(); // Dejar comentado si es el mapa principal
+            map.off('pm:create', handler);
         };
-
-    }, [map, handlePmCreate]);
+    }, [map, onGeometryCreated]);
 
     return null;
 };
 
-
-// --- GeoMapViewer Component (Principal) ---
+// --- COMPONENTE PRINCIPAL ---
 const GeoMapViewer: React.FC = () => {
     const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const [drawnGeometry, setDrawnGeometry] = useState<any>(null);
     const { layers, addLayer } = useGeoLayers();
-
     const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
     const handleGeometryCreated = useCallback((geoJson: any) => {
         setDrawnGeometry(geoJson);
     }, []);
 
-    // --- Lógica de Carga de Archivos (Corregida: FIX C) ---
     const handleFiles = (files: FileList) => {
-        const newFiles: UploadingFile[] = Array.from(files).map(file => ({
+        const newFiles: UploadingFile[] = Array.from(files).map((file) => ({
             file,
             status: 'pending',
-            progress: 0
+            progress: 0,
         }));
-        setUploadingFiles(prev => [...prev, ...newFiles]);
+        setUploadingFiles((prev) => [...prev, ...newFiles]);
         newFiles.forEach(uploadFile);
     };
 
     const uploadFile = async (uploadingFile: UploadingFile) => {
         const { file } = uploadingFile;
-
-        // Helper para actualizar el progreso del archivo específico
         const updateProgressState = (progress: number, status: UploadingFile['status'] = 'uploading') => {
-            setUploadingFiles(prev => prev.map(f =>
-                f.file.name === file.name ? { ...f, progress, status } : f
-            ));
+            setUploadingFiles((prev) =>
+                prev.map((f) => (f.file.name === file.name ? { ...f, progress, status } : f))
+            );
         };
 
         try {
             updateProgressState(0, 'uploading');
-
-            // FIX C: Pasamos el callback de progreso local al servicio
-            const result = await GeoService.uploadLayer(file, (progress) => {
-                updateProgressState(progress);
-            });
-
+            const result = await GeoService.uploadLayer(file, (p) => updateProgressState(p));
             if (result.success) {
                 updateProgressState(100, 'completed');
                 addLayer(result.layer);
@@ -224,30 +218,25 @@ const GeoMapViewer: React.FC = () => {
                 throw new Error('Upload failed');
             }
         } catch (error) {
-            console.error('Error uploading layer:', error);
             updateProgressState(0, 'error');
         }
     };
 
-
-    // --- Drag & Drop Handlers ---
+    // --- DRAG & DROP HANDLERS ---
     const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
         setIsDragging(true);
     };
-
     const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
         setIsDragging(false);
     };
-
     const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
     };
-
     const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         e.stopPropagation();
@@ -258,11 +247,12 @@ const GeoMapViewer: React.FC = () => {
         }
     };
 
+    const dropzoneStyle = isDragging ? { ...style.dropzoneBase, ...style.dropzoneDragging } : style.dropzoneBase;
 
     return (
-        <div className={styles.pageContainer}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'sans-serif' }}>
             <div
-                className={`${styles.dropzone} ${isDragging ? styles.dragging : ''}`}
+                style={dropzoneStyle}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
                 onDragOver={handleDragOver}
@@ -272,51 +262,47 @@ const GeoMapViewer: React.FC = () => {
                     ref={fileInputRef}
                     type="file"
                     multiple
-                    // Incluimos archivos comunes para Shapefile (.dbf, .shx, .prj) y GeoPackage
-                    accept=".gpkg,.shp,.dbf,.shx,.prj"
+                    accept=".zip"
                     style={{ display: 'none' }}
                     onChange={(e) => e.target.files && handleFiles(e.target.files)}
                 />
-                <p>Arrastra y suelta tus archivos geoespaciales aquí (.gpkg, .shp, .dbf, etc.)</p>
-                <button onClick={() => fileInputRef.current?.click()} className={styles.uploadButton}>
+                <p style={{ margin: '0.5rem 0' }}>Arrastra y suelta tus archivos <strong>.zip</strong> con shapefiles aquí</p>
+                <button onClick={() => fileInputRef.current?.click()} style={style.uploadButton}>
                     Seleccionar Archivos
                 </button>
+
                 {uploadingFiles.length > 0 && (
-                    <div className={styles.fileList}>
+                    <div style={style.fileList}>
                         {uploadingFiles.map(({ file, status, progress }) => (
-                            <div key={file.name} className={styles.fileItem}>
-                                <span className={styles.fileName}>{file.name}</span>
-                                <div className={styles.progressBarContainer}>
-                                    <div className={styles.progressBar} style={{ width: `${progress}%` }}></div>
+                            <div key={file.name} style={style.fileItem}>
+                                <span style={style.fileName}>{file.name}</span>
+                                <div style={style.progressBarContainer}>
+                                    <div style={{ ...style.progressBar, width: `${progress}%` }}></div>
                                 </div>
-                                <span className={styles.fileStatus} style={{ color: status === 'error' ? 'red' : 'green' }}>{status}</span>
+                                <span
+                                    style={{
+                                        ...style.fileStatus,
+                                        color: status === 'error' ? 'red' : status === 'completed' ? 'green' : 'black',
+                                    }}
+                                >
+                                    {status === 'completed' ? 'Listo' : status === 'uploading' ? 'Cargando' : status === 'error' ? 'Error' : 'Pendiente'}
+                                </span>
                             </div>
                         ))}
                     </div>
                 )}
             </div>
 
-            <div className={styles.mapViewer}>
-                <MapContainer
-                    center={[51.505, -0.09]}
-                    zoom={13}
-                    style={{ height: '100%', width: '100%' }}
-                // Eliminamos whenReady y mapRef para seguir la práctica de useMap
-                >
+            <div style={{ flexGrow: 1, minHeight: '500px' }}>
+                <MapContainer center={[40.4168, -3.7038]} zoom={6} style={{ height: '100%', width: '100%' }}>
                     <TileLayer
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     />
-
-                    {/* FIX A: Renderizamos PmControls para inicializar el plugin */}
                     <PmControls onGeometryCreated={handleGeometryCreated} />
-
-                    {/* FIX B: Renderizamos LayerRenderer para que haga el fetch de cada capa */}
-                    {layers.map((layer, index) => (
-                        <LayerRenderer key={index} layer={layer} />
+                    {layers.map((layer, idx) => (
+                        <LayerRenderer key={idx} layer={layer} />
                     ))}
-
-                    {/* Renderizar la geometría dibujada */}
                     {drawnGeometry && <GeoJSON data={drawnGeometry} style={{ color: 'red', weight: 3 }} />}
                 </MapContainer>
             </div>
