@@ -1,0 +1,85 @@
+
+.pageContainer {
+    display: flex;
+    flex-direction: column;
+    height: 100vh; /* O el alto que necesites */
+}
+
+.dropzone {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    margin: 20px;
+    transition: border-color 0.3s, background-color 0.3s;
+}
+
+.dropzone.dragging {
+    border-color: #007bff;
+    background-color: #f0f8ff;
+}
+
+.uploadButton {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.3s;
+}
+
+.uploadButton:hover {
+    background-color: #0056b3;
+}
+
+.fileList {
+    margin-top: 20px;
+    text-align: left;
+}
+
+.fileItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.fileName {
+    font-size: 0.9em;
+}
+
+.progressBarContainer {
+    flex-grow: 1;
+    height: 10px;
+    background-color: #e9ecef;
+    border-radius: 5px;
+    margin: 0 10px;
+}
+
+.progressBar {
+    height: 100%;
+    background-color: #28a745;
+    border-radius: 5px;
+    transition: width 0.4s ease-in-out;
+}
+
+.fileStatus {
+    font-size: 0.8em;
+    font-weight: bold;
+    min-width: 80px; /* To prevent layout shifts */
+    text-align: right;
+}
+
+.mapViewer {
+    flex-grow: 1;
+    border-top: 2px solid #ccc; /* Separator */
+}
+
+/* Ensure Leaflet controls are visible */
+:global(.leaflet-pm-toolbar) {
+    z-index: 1001 !important; /* Higher than map */
+}
+
