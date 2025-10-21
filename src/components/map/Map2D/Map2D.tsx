@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
+
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.pm/dist/leaflet.pm.css';
 import 'leaflet.pm'; // Solo necesitamos que el plugin se ejecute, sin necesidad de importar L
