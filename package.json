@@ -14,6 +14,7 @@
     "@types/leaflet": "^1.9.21",
     "@types/leaflet.pm": "^0.13.9",
     "@types/react-router-dom": "^5.3.3",
+    "gdal-async": "^3.11.4",
     "leaflet": "^1.9.4",
     "leaflet.pm": "^2.2.0",
     "proj4": "^2.19.10",

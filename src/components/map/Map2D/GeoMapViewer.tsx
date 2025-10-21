@@ -4,9 +4,10 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet.pm/dist/leaflet.pm.css';
 import 'leaflet.pm';
 import type { FeatureCollection } from 'geojson';
-import shp from 'shpjs';
+//import shp from 'shpjs';
 import { LayerControlPanel } from '../LayerControlPanel/LayerControlPanel';
 import L, { geoJSON } from 'leaflet';
+
 
 // --- RENDERIZADO Y EFECTOS ---
 interface LayerRendererProps {
@@ -99,9 +100,94 @@ const PmControls: React.FC<{ onGeometryCreated: (geoJson: any) => void }> = ({ o
 };
 
 // -- Servicio de carga --
-type ProgressCallback = (progress: number) => void;
+//type ProgressCallback = (pct: number) => void;
 
 export const GeoService = {
+    /**
+     * Cualquier archivo → GeoJSON vía gdal-async
+     * Misma firma que antes para no romper la UI
+     */
+    uploadLayer: async (file: File, onProgress?: (p: number) => void) => {
+    const fd = new FormData();
+    fd.append('file', file);
+
+    onProgress?.(10);
+    const res = await fetch('http://localhost:4000/upload', {
+      method: 'POST',
+      body: fd,
+    });
+    onProgress?.(100);
+
+    if (!res.ok) throw new Error(await res.text());
+    const geoJson: FeatureCollection = await res.json();
+    return { success: true, layer: { name: file.name, geoJson } };
+  },
+    /* uploadLayer: async (
+        file: File,
+        onProgress?: ProgressCallback
+    ): Promise<{ success: boolean; layer: LayerData }> => {
+        try {
+            onProgress?.(10);
+
+             ---------- 1.  Abrir con GDAL (vsimem) ---------- 
+            const buffer = await file.arrayBuffer();
+            const ds = await gdal.openAsync(buffer); // acepta Buffer | ArrayBuffer
+            onProgress?.(30);
+
+             ---------- 2.  Primera capa vectorial ---------- 
+            if (ds.layers.count() === 0) throw new Error('No se encontraron capas vectoriales');
+            const layer = ds.layers.get(0);
+
+             ---------- 3.  FeatureCollection de salida ---------- 
+            const fc: FeatureCollection = { type: 'FeatureCollection', features: [] };
+
+             opcional: reprojectar a EPSG:4326 si no lo está
+            const tgt = gdal.SpatialReference.fromEPSG(4326);
+            const transform = layer.srs
+                ? new gdal.CoordinateTransformation(layer.srs, tgt)
+                : null;
+
+             ---------- 4.  Leer features (async iterator) ---------- 
+            let i = 0;
+            for await (const f of layer.features) {
+                
+                let geom = f.getGeometry();
+                if (geom) {
+                    if (transform) geom.transform(transform); // → 4326
+                    const gjGeom = geom.toObject(); // GeoJSON geometry
+                    fc.features.push({
+                        type: 'Feature',
+                        geometry: gjGeom as GeoJSON.Geometry,
+                        properties: f.fields.toObject() || {},
+                    });
+                }
+                 feedback cada 50 feats
+                if (++i % 50 === 0) onProgress?.(30 + (i / layer.features.count()) * 60);
+            }
+            onProgress?.(100);
+
+            return { success: true, layer: { name: file.name, geoJson: fc } };
+        } catch (e) {
+            console.error('[GeoService] gdal-async error:', e);
+            throw new Error('No se pudo convertir el archivo a GeoJSON');
+        }
+    }, */
+
+    /* ---- resto de métodos (downloadLayer, runValidation) sin cambios ---- */
+    downloadLayer: async (layerId: string): Promise<Blob> => {
+        // Simula descarga de archivo original + metadato
+        const mockBlob = new Blob([JSON.stringify({ layerId, meta: 'mock' })], { type: 'application/zip' });
+        return Promise.resolve(mockBlob);
+    },
+
+    runValidation: async (layerId: string): Promise<{ issues: string[] }> => {
+        // Simula validación topológica
+        const hasIssues = Math.random() > 0.5;
+        return Promise.resolve({ issues: hasIssues ? ['Geometría vacía detectada'] : [] });
+    },
+};
+
+/* export const GeoService = {
     uploadLayer: async (file: File, onProgress: ProgressCallback): Promise<{ success: boolean; layer: LayerData }> => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -138,7 +224,7 @@ export const GeoService = {
         const hasIssues = Math.random() > 0.5;
         return Promise.resolve({ issues: hasIssues ? ['Geometría vacía detectada'] : [] });
     },
-};
+}; */
 
 // -- Tipos --
 export interface LayerData {
@@ -306,7 +392,7 @@ const GeoMapViewer: React.FC = () => {
                     ref={fileInputRef}
                     type="file"
                     multiple
-                    accept=".zip"
+                    accept=".zip,.shp,.shx,.dbf,.prj,.xml"
                     style={{ display: 'none' }}
                     onChange={(e) => e.target.files && handleFiles(e.target.files)}
                 />
