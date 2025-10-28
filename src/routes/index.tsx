@@ -10,6 +10,7 @@ import GeoMapViewer from "../components/map/Map2D/GeoMapViewer";
 
 import KanbanCard from "../components/kanban/KanbanCard/KanbanCard"
 import ProjectDashboard from "../components/project/ProjectDashboard";
+import {OllamaChat} from "../components/chat/OllamaChat";
 
 
 
@@ -50,8 +51,10 @@ export const router = createBrowserRouter([
     {
         path: "/project/new",
         element: <ProjectDashboard />
+    },
+    {
+        path: "/chat",
+        element: <OllamaChat />
     }
-
-
 
 ]);
