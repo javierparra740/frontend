@@ -9,6 +9,7 @@ import GeoMapViewer from "../components/map/Map2D/GeoMapViewer";
 
 
 import KanbanCard from "../components/kanban/KanbanCard/KanbanCard"
+import ProjectDashboard from "../components/project/ProjectDashboard";
 
 
 
@@ -45,6 +46,10 @@ export const router = createBrowserRouter([
     {
         path: "/task/new",
         element: <KanbanCard task={{ id: "1", title: "tarea 1", assignee: undefined, dueDate:"" ,status: 'ToDo',description: ""}} />
+    },
+    {
+        path: "/project/new",
+        element: <ProjectDashboard />
     }
 
 

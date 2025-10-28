@@ -3,15 +3,6 @@ import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.pm/dist/leaflet.pm.css';
 import 'leaflet.pm';
-<<<<<<< HEAD
-import type { FeatureCollection } from 'geojson';
-//import shp from 'shpjs';
-import { LayerControlPanel } from '../LayerControlPanel/LayerControlPanel';
-import L, { geoJSON } from 'leaflet';
-
-
-// --- RENDERIZADO Y EFECTOS ---
-=======
 import type { FeatureCollection, Geometry } from 'geojson';
 import shp from 'shpjs';
 import { LayerControlPanel } from '../LayerControlPanel/LayerControlPanel';
@@ -88,10 +79,10 @@ const validateGeographicData = (geoJson: FeatureCollection): ValidationResult =>
   geoJson.features.forEach((feature, index) => {
     if (feature.geometry) {
       const coords = getCoordinates(feature.geometry);
-      const invalidCoords = coords.filter(coord => 
+      const invalidCoords = coords.filter(coord =>
         Math.abs(coord[0]) > 180 || Math.abs(coord[1]) > 90
       );
-      
+
       if (invalidCoords.length > 0) {
         warnings.push(`Feature ${index + 1}: ${invalidCoords.length} coordenadas fuera del rango WGS84 típico`);
       } else if (coords.length > 0) {
@@ -113,7 +104,7 @@ const validateAttributes = (geoJson: FeatureCollection): ValidationResult => {
   const warnings: string[] = [];
 
   const featuresWithProperties = geoJson.features.filter(f => f.properties && Object.keys(f.properties).length > 0);
-  
+
   // 1. Verificar presencia de atributos
   if (featuresWithProperties.length === 0) {
     warnings.push('El shapefile no contiene atributos/tabla de datos');
@@ -123,10 +114,10 @@ const validateAttributes = (geoJson: FeatureCollection): ValidationResult => {
   // 2. Validar nombres de campos
   const sampleFeature = featuresWithProperties[0];
   if (sampleFeature.properties) {
-    const problematicFields = Object.keys(sampleFeature.properties).filter(field => 
+    const problematicFields = Object.keys(sampleFeature.properties).filter(field =>
       /[^a-zA-Z0-9_áéíóúñÑ]/.test(field)
     );
-    
+
     if (problematicFields.length > 0) {
       warnings.push(`Algunos nombres de campo contienen caracteres especiales: ${problematicFields.slice(0, 3).join(', ')}${problematicFields.length > 3 ? '...' : ''}`);
     }
@@ -137,8 +128,8 @@ const validateAttributes = (geoJson: FeatureCollection): ValidationResult => {
     const firstFields = Object.keys(featuresWithProperties[0].properties || {});
     const inconsistentFeatures = featuresWithProperties.slice(1).filter((feature, index) => {
       const currentFields = Object.keys(feature.properties || {});
-      return firstFields.length !== currentFields.length || 
-             firstFields.some(field => !currentFields.includes(field));
+      return firstFields.length !== currentFields.length ||
+        firstFields.some(field => !currentFields.includes(field));
     });
 
     if (inconsistentFeatures.length > 0) {
@@ -168,7 +159,7 @@ const validatePerformance = (geoJson: FeatureCollection): ValidationResult => {
     if (feature.geometry) {
       const vertices = countVertices(feature.geometry);
       totalVertices += vertices;
-      
+
       if (vertices > 1000) {
         complexGeometries.push(index + 1);
       }
@@ -239,7 +230,6 @@ const calculateValidationStats = (geoJson: FeatureCollection): ValidationStats =
 };
 
 // --- COMPONENTES EXISTENTES (sin cambios) ---
->>>>>>> a9ae00de2b89b0794a90573abff998e1056eb445
 interface LayerRendererProps {
   layer: LayerData;
   opacity: number;
@@ -298,200 +288,12 @@ const PmControls: React.FC<{ onGeometryCreated: (geoJson: any) => void }> = ({ o
   return null;
 };
 
-<<<<<<< HEAD
-// -- Servicio de carga --
-//type ProgressCallback = (pct: number) => void;
-
-export const GeoService = {
-    /**
-     * Cualquier archivo → GeoJSON vía gdal-async
-     * Misma firma que antes para no romper la UI
-     */
-    uploadLayer: async (file: File, onProgress?: (p: number) => void) => {
-    const fd = new FormData();
-    fd.append('file', file);
-
-    onProgress?.(10);
-    const res = await fetch('http://localhost:4000/upload', {
-      method: 'POST',
-      body: fd,
-    });
-    onProgress?.(100);
-
-    if (!res.ok) throw new Error(await res.text());
-    const geoJson: FeatureCollection = await res.json();
-    return { success: true, layer: { name: file.name, geoJson } };
-  },
-    /* uploadLayer: async (
-        file: File,
-        onProgress?: ProgressCallback
-    ): Promise<{ success: boolean; layer: LayerData }> => {
-        try {
-            onProgress?.(10);
-
-             ---------- 1.  Abrir con GDAL (vsimem) ---------- 
-            const buffer = await file.arrayBuffer();
-            const ds = await gdal.openAsync(buffer); // acepta Buffer | ArrayBuffer
-            onProgress?.(30);
-
-             ---------- 2.  Primera capa vectorial ---------- 
-            if (ds.layers.count() === 0) throw new Error('No se encontraron capas vectoriales');
-            const layer = ds.layers.get(0);
-
-             ---------- 3.  FeatureCollection de salida ---------- 
-            const fc: FeatureCollection = { type: 'FeatureCollection', features: [] };
-
-             opcional: reprojectar a EPSG:4326 si no lo está
-            const tgt = gdal.SpatialReference.fromEPSG(4326);
-            const transform = layer.srs
-                ? new gdal.CoordinateTransformation(layer.srs, tgt)
-                : null;
-
-             ---------- 4.  Leer features (async iterator) ---------- 
-            let i = 0;
-            for await (const f of layer.features) {
-                
-                let geom = f.getGeometry();
-                if (geom) {
-                    if (transform) geom.transform(transform); // → 4326
-                    const gjGeom = geom.toObject(); // GeoJSON geometry
-                    fc.features.push({
-                        type: 'Feature',
-                        geometry: gjGeom as GeoJSON.Geometry,
-                        properties: f.fields.toObject() || {},
-                    });
-                }
-                 feedback cada 50 feats
-                if (++i % 50 === 0) onProgress?.(30 + (i / layer.features.count()) * 60);
-            }
-            onProgress?.(100);
-
-            return { success: true, layer: { name: file.name, geoJson: fc } };
-        } catch (e) {
-            console.error('[GeoService] gdal-async error:', e);
-            throw new Error('No se pudo convertir el archivo a GeoJSON');
-        }
-    }, */
-
-    /* ---- resto de métodos (downloadLayer, runValidation) sin cambios ---- */
-    downloadLayer: async (layerId: string): Promise<Blob> => {
-        // Simula descarga de archivo original + metadato
-        const mockBlob = new Blob([JSON.stringify({ layerId, meta: 'mock' })], { type: 'application/zip' });
-        return Promise.resolve(mockBlob);
-    },
-
-    runValidation: async (layerId: string): Promise<{ issues: string[] }> => {
-        // Simula validación topológica
-        const hasIssues = Math.random() > 0.5;
-        return Promise.resolve({ issues: hasIssues ? ['Geometría vacía detectada'] : [] });
-    },
-};
-
-/* export const GeoService = {
-    uploadLayer: async (file: File, onProgress: ProgressCallback): Promise<{ success: boolean; layer: LayerData }> => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                try {
-                    onProgress(30);
-                    const buffer = e.target?.result as ArrayBuffer;
-                    let geoJson = await shp(buffer);
-                    // Si shpjs devuelve un array, fusiona todos los FeatureCollection en uno solo
-                    if (Array.isArray(geoJson)) {
-                        geoJson = {
-                            type: 'FeatureCollection',
-                            features: geoJson.flatMap((fc: any) => fc.features),
-                        };
-                    }
-                    onProgress(100);
-                    resolve({ success: true, layer: { name: file.name, geoJson } });
-                } catch (err) {
-                    reject(err);
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        });
-    },
-
-    downloadLayer: async (layerId: string): Promise<Blob> => {
-        // Simula descarga de archivo original + metadato
-        const mockBlob = new Blob([JSON.stringify({ layerId, meta: 'mock' })], { type: 'application/zip' });
-        return Promise.resolve(mockBlob);
-    },
-
-    runValidation: async (layerId: string): Promise<{ issues: string[] }> => {
-        // Simula validación topológica
-        const hasIssues = Math.random() > 0.5;
-        return Promise.resolve({ issues: hasIssues ? ['Geometría vacía detectada'] : [] });
-    },
-}; */
-
-// -- Tipos --
-export interface LayerData {
-    name: string;
-    geoJson: FeatureCollection;
-}
-
-// -- Hook de capas --
-const useGeoLayers = () => {
-    const [layers, setLayers] = useState<LayerData[]>([]);
-
-    const addLayer = (layer: LayerData) => {
-        setLayers((prev) => [...prev, layer]);
-    };
-
-    return { layers, addLayer };
-};
-
-// -- Estado de carga --
-interface UploadingFile {
-    file: File;
-    status: 'pending' | 'uploading' | 'completed' | 'error';
-    progress: number;
-}
-
-// -- Componente principal --
-const GeoMapViewer: React.FC = () => {
-    const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
-    const [isDragging, setIsDragging] = useState(false);
-    const [drawnGeometry, setDrawnGeometry] = useState<any>(null);
-    const { layers, addLayer } = useGeoLayers();
-
-    // Visibilidad y opacidad
-    const [visibility, setVisibility] = useState<Record<string, boolean>>({});
-    const [opacity, setOpacity] = useState<Record<string, number>>({});
-
-    const fileInputRef = React.useRef<HTMLInputElement | null>(null);
-
-    const handleGeometryCreated = useCallback((geoJson: any) => {
-        setDrawnGeometry(geoJson);
-    }, []);
-
-    const handleFiles = (files: FileList) => {
-        const newFiles: UploadingFile[] = Array.from(files).map((file) => ({
-            file,
-            status: 'pending',
-            progress: 0,
-        }));
-        setUploadingFiles((prev) => [...prev, ...newFiles]);
-        newFiles.forEach(uploadFile);
-    };
-
-    const uploadFile = async (uploadingFile: UploadingFile) => {
-        const { file } = uploadingFile;
-        const updateProgressState = (progress: number, status: UploadingFile['status'] = 'uploading') => {
-            setUploadingFiles((prev) =>
-                prev.map((f) => (f.file.name === file.name ? { ...f, progress, status } : f))
-            );
-        };
-
-=======
 // --- SERVICIO GEO ACTUALIZADO CON VALIDACIONES ---
 type ProgressCallback = (progress: number) => void;
 
 export const GeoService = {
-  uploadLayer: async (file: File, onProgress: ProgressCallback): Promise<{ 
-    success: boolean; 
+  uploadLayer: async (file: File, onProgress: ProgressCallback): Promise<{
+    success: boolean;
     layer: LayerData;
     validation?: {
       security: ValidationResult;
@@ -502,16 +304,15 @@ export const GeoService = {
   }> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      
+
       reader.onload = async (e) => {
->>>>>>> a9ae00de2b89b0794a90573abff998e1056eb445
         try {
           onProgress(30);
           const buffer = e.target?.result as ArrayBuffer;
-          
+
           // Procesar shapefile con shpjs
           let geoJson = await shp(buffer);
-          
+
           // Si shpjs devuelve un array, fusionar FeatureCollections
           if (Array.isArray(geoJson)) {
             geoJson = {
@@ -519,32 +320,32 @@ export const GeoService = {
               features: geoJson.flatMap((fc: any) => fc.features),
             };
           }
-          
+
           onProgress(70);
-          
+
           // Ejecutar validaciones
           const securityValidation = validateSecurity(file);
           const geographicValidation = validateGeographicData(geoJson);
           const attributesValidation = validateAttributes(geoJson);
           const performanceValidation = validatePerformance(geoJson);
-          
+
           // Combinar todos los errores
           const allErrors = [
             ...securityValidation.errors,
             ...geographicValidation.errors,
             ...performanceValidation.errors
           ];
-          
+
           // Si hay errores críticos, rechazar
           if (allErrors.length > 0) {
             reject(new Error(allErrors.join('; ')));
             return;
           }
-          
+
           onProgress(100);
-          
-          resolve({ 
-            success: true, 
+
+          resolve({
+            success: true,
             layer: { name: file.name, geoJson },
             validation: {
               security: securityValidation,
@@ -553,12 +354,12 @@ export const GeoService = {
               performance: performanceValidation
             }
           });
-          
+
         } catch (err) {
           reject(err);
         }
       };
-      
+
       reader.onerror = () => reject(new Error('Error al leer el archivo'));
       reader.readAsArrayBuffer(file);
     });
@@ -602,8 +403,8 @@ const GeoMapViewer: React.FC = () => {
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [drawnGeometry, setDrawnGeometry] = useState<any>(null);
-  const [validationMessages, setValidationMessages] = useState<{errors: string[], warnings: string[]}>({errors: [], warnings: []});
-  
+  const [validationMessages, setValidationMessages] = useState<{ errors: string[], warnings: string[] }>({ errors: [], warnings: [] });
+
   const { layers, addLayer } = useGeoLayers();
   const [visibility, setVisibility] = useState<Record<string, boolean>>({});
   const [opacity, setOpacity] = useState<Record<string, number>>({});
@@ -628,10 +429,10 @@ const GeoMapViewer: React.FC = () => {
 
   const uploadFile = async (uploadingFile: UploadingFile) => {
     const { file } = uploadingFile;
-    
+
     const updateProgressState = (progress: number, status: UploadingFile['status'] = 'uploading', errors?: string[], warnings?: string[]) => {
       setUploadingFiles((prev) =>
-        prev.map((f) => 
+        prev.map((f) =>
           f.file.name === file.name ? { ...f, progress, status, errors, warnings } : f
         )
       );
@@ -639,7 +440,7 @@ const GeoMapViewer: React.FC = () => {
 
     try {
       updateProgressState(0, 'validating');
-      
+
       // Validación inicial de seguridad
       const securityValidation = validateSecurity(file);
       if (!securityValidation.isValid) {
@@ -660,10 +461,10 @@ const GeoMapViewer: React.FC = () => {
       }
 
       updateProgressState(0, 'uploading');
-      
+
       // Procesar archivo con validaciones integradas
       const result = await GeoService.uploadLayer(file, (p) => updateProgressState(p));
-      
+
       if (result.success) {
         // Recolectar todos los warnings de las validaciones
         const allWarnings = [
@@ -674,7 +475,7 @@ const GeoMapViewer: React.FC = () => {
         ];
 
         updateProgressState(100, 'completed', [], allWarnings);
-        
+
         // Mostrar warnings en la consola y en el estado
         if (allWarnings.length > 0) {
           console.warn('Advertencias de validación para', file.name, ':', allWarnings);
@@ -683,14 +484,14 @@ const GeoMapViewer: React.FC = () => {
             warnings: [...prev.warnings, ...allWarnings]
           }));
         }
-        
+
         addLayer(result.layer);
         setVisibility((v) => ({ ...v, [result.layer.name]: true }));
         setOpacity((o) => ({ ...o, [result.layer.name]: 1 }));
-        
+
         console.log('✅ Archivo cargado exitosamente:', file.name);
       }
-      
+
     } catch (error) {
       console.error('❌ Error en carga:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido al procesar el archivo';
@@ -704,7 +505,7 @@ const GeoMapViewer: React.FC = () => {
 
   // Limpiar mensajes de validación
   const clearValidationMessages = () => {
-    setValidationMessages({errors: [], warnings: []});
+    setValidationMessages({ errors: [], warnings: [] });
   };
 
   // --- DRAG & DROP (sin cambios) ---
@@ -720,32 +521,10 @@ const GeoMapViewer: React.FC = () => {
     setIsDragging(false);
   };
 
-<<<<<<< HEAD
-            <div
-                style={dropzoneStyle}
-                onDragEnter={handleDragEnter}
-                onDragLeave={handleDragLeave}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-            >
-                <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept=".zip,.shp,.shx,.dbf,.prj,.xml"
-                    style={{ display: 'none' }}
-                    onChange={(e) => e.target.files && handleFiles(e.target.files)}
-                />
-                <p style={{ margin: '0.5rem 0' }}>Arrastra y suelta tus archivos <strong>.zip</strong> con shapefiles aquí</p>
-                <button onClick={() => fileInputRef.current?.click()} style={uploadButton}>
-                    Seleccionar Archivos
-                </button>
-=======
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
   };
->>>>>>> a9ae00de2b89b0794a90573abff998e1056eb445
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -805,7 +584,7 @@ const GeoMapViewer: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'sans-serif' }}>
-      
+
       {/* Zona de Dropzone */}
       <div
         style={dropzoneStyle}
@@ -862,52 +641,52 @@ const GeoMapViewer: React.FC = () => {
         {uploadingFiles.length > 0 && (
           <div style={{ marginTop: '1rem', paddingTop: '0.5rem', borderTop: '1px solid #e5e7eb' }}>
             {uploadingFiles.map(({ file, status, progress, errors = [], warnings = [] }) => (
-              <div key={file.name} style={{ 
-                marginBottom: '0.5rem', 
-                padding: '0.5rem', 
-                border: '1px solid #e5e7eb', 
+              <div key={file.name} style={{
+                marginBottom: '0.5rem',
+                padding: '0.5rem',
+                border: '1px solid #e5e7eb',
                 borderRadius: '0.375rem',
                 backgroundColor: status === 'error' ? '#fef2f2' : status === 'completed' ? '#f0fff4' : 'white'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ 
-                    overflow: 'hidden', 
-                    whiteSpace: 'nowrap', 
-                    textOverflow: 'ellipsis', 
+                  <span style={{
+                    overflow: 'hidden',
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
                     width: '50%',
                     fontWeight: 'bold'
                   }}>
                     {file.name}
                   </span>
                   <div style={{ width: '25%', height: '0.5rem', backgroundColor: '#e5e7eb', borderRadius: '0.25rem', overflow: 'hidden' }}>
-                    <div style={{ 
-                      height: '100%', 
+                    <div style={{
+                      height: '100%',
                       backgroundColor: status === 'error' ? '#dc2626' : status === 'completed' ? '#10b981' : '#3b82f6',
-                      transition: 'width 0.3s ease-in-out', 
-                      width: `${progress}%` 
+                      transition: 'width 0.3s ease-in-out',
+                      width: `${progress}%`
                     }}></div>
                   </div>
-                  <span style={{ 
-                    width: '16.6667%', 
-                    textAlign: 'right', 
-                    fontSize: '0.875rem', 
+                  <span style={{
+                    width: '16.6667%',
+                    textAlign: 'right',
+                    fontSize: '0.875rem',
                     color: status === 'error' ? '#dc2626' : status === 'completed' ? '#059669' : status === 'validating' ? '#d97706' : '#374151',
                     fontWeight: 'bold'
                   }}>
-                    {status === 'completed' ? '✅ Listo' : 
-                     status === 'uploading' ? '📤 Cargando' : 
-                     status === 'validating' ? '🔍 Validando' :
-                     status === 'error' ? '❌ Error' : '⏳ Pendiente'}
+                    {status === 'completed' ? '✅ Listo' :
+                      status === 'uploading' ? '📤 Cargando' :
+                        status === 'validating' ? '🔍 Validando' :
+                          status === 'error' ? '❌ Error' : '⏳ Pendiente'}
                   </span>
                 </div>
-                
+
                 {/* Mostrar errores y warnings específicos del archivo */}
                 {errors.length > 0 && (
                   <div style={{ ...errorStyle, margin: '0.5rem 0 0 0', padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}>
                     {errors.map((error, idx) => <div key={idx}>• {error}</div>)}
                   </div>
                 )}
-                
+
                 {warnings.length > 0 && (
                   <div style={{ ...warningStyle, margin: '0.5rem 0 0 0', padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}>
                     {warnings.map((warning, idx) => <div key={idx}>• {warning}</div>)}
@@ -928,7 +707,7 @@ const GeoMapViewer: React.FC = () => {
           />
 
           <PmControls onGeometryCreated={handleGeometryCreated} />
-          
+
           {/* Renderizar capas */}
           {layers.map((layer, idx) => (
             visibility[layer.name] !== false ? (
