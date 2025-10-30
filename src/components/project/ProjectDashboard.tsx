@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import type Project from '../../types/project.types';
+import type {Project} from '../../types/project.types';
 import ProjectService from '../../services/projectService';
 import './ProjectDashboard.css';
-import type User from '../../types/user.types';
+import type {User} from '../../types/user.types';
 
 const ProjectDashboard: React.FC = () => {
     const [projects, setProjects] = useState<Project[]>([]);
