@@ -7,6 +7,7 @@ import type { FeatureCollection, Geometry } from 'geojson';
 import shp from 'shpjs';
 import { LayerControlPanel } from '../LayerControlPanel/LayerControlPanel';
 import L, { geoJSON } from 'leaflet';
+import { toast, modal } from '../../../utils/alertUtils'; // adjust path
 
 // --- INTERFACES Y TIPOS PARA VALIDACIONES ---
 interface ValidationResult {

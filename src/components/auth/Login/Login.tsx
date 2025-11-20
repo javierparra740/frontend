@@ -1,16 +1,15 @@
-import React, { useState } from 'react';
+'use client';
 import styles from './Login.module.css';
-
+import emailStore from '../../../store/useEmailStore';
+import passwordStore from '../../../store/usePasswordStore';
 const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
+  const { email, setEmail } = emailStore();
+  const { password, setPassword } = passwordStore();
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Lógica de login aquí
     console.log({ email, password });
   };
-
   return (
     <div className={styles.container}>
       <form onSubmit={handleSubmit} className={styles.form}>
@@ -42,5 +41,4 @@ const Login: React.FC = () => {
     </div>
   );
 };
-
 export default Login;

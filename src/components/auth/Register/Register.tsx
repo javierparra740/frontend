@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+'use client';
 import styles from './Register.module.css';
-
+import emailStore from '../../../store/useEmailStore';
+import passwordStore from '../../../store/usePasswordStore';
+import confirmPasswordStore from '../../../store/useConfirmPasswordStore';
 const Register: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-
+  const { email, setEmail } = emailStore();
+  const { password, setPassword } = passwordStore();
+  const { confirmPassword, setConfirmPassword } = confirmPasswordStore();
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
@@ -15,7 +16,6 @@ const Register: React.FC = () => {
     // Lógica de registro aquí
     console.log({ email, password });
   };
-
   return (
     <div className={styles.container}>
       <form onSubmit={handleSubmit} className={styles.form}>
@@ -57,5 +57,4 @@ const Register: React.FC = () => {
     </div>
   );
 };
-
 export default Register;
